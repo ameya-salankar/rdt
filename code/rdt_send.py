@@ -33,10 +33,11 @@ class Server:
             self.server_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
             self.server_socket.bind(self.server_address)
             print(f"Server up and listening at {self.server_address[0]}:{self.server_address[1]}")
+            return True
         except Exception as e:
             print("Socket not created.")
             print(e)
-            sys.exit(1)
+            return False
     
     def extract_header(self, string):
         """
