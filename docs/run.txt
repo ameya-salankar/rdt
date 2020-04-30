@@ -1,0 +1,9 @@
+How to run:
+
+In a terminal run 
+python3 server.py
+
+In another terminal, run
+python3 client_app.py
+
+The outputs will be visible on the terminal
