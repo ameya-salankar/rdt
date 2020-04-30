@@ -104,7 +104,6 @@ class Client:
         while True:
             if syn_term_count == 30:
                 self.timeout = True
-                print("Connection unsuccessful.")
                 sys.exit(1)
             if syn:
                 if self.syn_terminate:
@@ -124,7 +123,6 @@ class Client:
         msg = "$*seqno:0,purpose:SYN*$"
         msg = self.make_packet(msg)
         recvd = False
-        network_congested = False
         self.receive_socket.settimeout(90)
 
         # Send SYN packets
@@ -139,6 +137,7 @@ class Client:
                     break
                 except socket.timeout:
                     if not timed_send.is_alive():
+                        print("Connection unsuccessful")
                         sys.exit()
             # self.receive_socket.settimeout(None)
 
@@ -204,18 +203,11 @@ class Client:
         timed_send.start()
         # Is the next packet the first response?
         first_packet = True
-        count = 0
         file = None
         self.receive_socket.settimeout(90)
 
         while True:
             # Receive RESPonse
-            if count == 10:
-                print("Exiting.")
-                sys.exit(1)
-            if network_congested:
-                count += 1
-
             try:
                 resp = self.receive_socket.recvfrom(self.buffer_size)
             except socket.timeout:
@@ -227,7 +219,7 @@ class Client:
             header = self.extract_header(str(resp[0]))
             corrupted = self.check_packet(header, str(resp[0]))
 
-            if corrupted and not network_congested:
+            if corrupted:
                 self.receive_socket.sendto(bytes(msg, "UTF-8"), self.server_address)
                 continue
 
@@ -276,21 +268,6 @@ class Client:
             elif header["purpose"] == "INVFILE":
                 print("Requested file does not exist")
                 sys.exit(1)
-
-            elif header["purpose"] == "CONG":
-                network_congested = True
-                print("Network congested. Please try again later.")
-                msg = f"$*seqno:{self.seq_no},purpose:CONG_ACK*$"
-                msg = self.make_packet(msg)
-                self.terminate = False
-                timed_send = threading.Thread(
-                    target=self.timer,
-                    args=(msg, self.server_address, True),
-                    daemon=True,
-                )
-                timed_send.start()
-                if file != None:
-                    file.close()
 
             elif header["purpose"] == "FILE_FIN":
                 # Send FIN_ACK
